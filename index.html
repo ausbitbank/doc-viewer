@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="A simple GitHub repository directory documentation explorer.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>ES8 Dir explorer</title>
+
+    <!-- Add to homescreen Chrome -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="icon" sizes="192x192" href="icon-192x192-path">
+
+    <!-- Add to homescreen Safari-->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="APP title">
+    <link rel="apple-touch-icon-precomposed" href="icon-12x120-path">
+
+    <!-- Tile icon for Win8 (144x144 + tile color) -->
+    <meta name="msapplication-TileImage" content="icon-144x144-path">
+    <meta name="msapplication-TileColor" content="#ff5252">
+
+    <link rel="shortcut icon" href="favicon path">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.teal-red.min.css">
+
+    <style>
+
+      .es8-ribbon {
+        height: 30%;
+        width: 100%;
+        position: fixed;
+      }
+
+      .es8-content {
+        height: 100%;
+        width: 100%;
+        max-width: 800px;
+        margin: auto;
+      }
+
+      .es8-content-card {
+          width: calc(100% - 32px);
+          height: 100%;
+          margin: 32px 16px;
+      }
+
+      .mdl-navigation .mdl-navigation {
+          margin-left: 12px !important;
+      }
+
+      .mdl-navigation__link {
+          padding: 16px !important;
+          padding-left: 12px !important;
+          margin-left: 4px !important;
+          border-left: 2px solid #ccc !important;
+      }
+
+      #editlink {
+        position: fixed;
+        z-index: 1;
+        bottom: 16px;
+        right: 16px;
+      }
+
+    </style>
+  </head>
+
+  <body>
+
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-drawer
+            mdl-layout--fixed-header">
+      <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+          <div class="mdl-layout-spacer"></div>
+          <div class="mdl-textfield mdl-js-textfield mdl-textfield--expandable
+                      mdl-textfield--floating-label mdl-textfield--align-right">
+            <label class="mdl-button mdl-js-button mdl-button--icon"
+                   for="fixed-header-drawer-exp">
+              <i class="material-icons">search</i>
+            </label>
+            <div class="mdl-textfield__expandable-holder">
+              <input class="mdl-textfield__input" type="text" name="sample"
+                     id="fixed-header-drawer-exp">
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="mdl-layout__drawer">
+        <span class="mdl-layout-title">Title</span>
+        <div id="naviguationMenu"></div>
+      </div>
+      <main class="mdl-layout__content">
+        <div class="es8-ribbon mdl-color--primary-dark"></div>
+        <div class="es8-content">
+
+          <div class="es8-content-card mdl-card mdl-shadow--4dp">
+            <div class="mdl-card__title">
+              <h2 id="filepath" class="mdl-card__title-text">No file found</h2>
+            </div>
+
+            <div class="mdl-card__supporting-text">
+              <div id=htmlcontent>
+                <h3>No readme</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <a id="editlink" href="https://github.com/esteem8app" target="_blank">
+      <button class="mdl-button mdl-js-button mdl-button--fab mdl-js-ripple-effect mdl-button--colored">
+        <i class="material-icons">edit</i>
+      </button>
+    </a>
+
+    <script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <script src="https://cdn.rawgit.com/showdownjs/showdown/1.6.4/dist/showdown.min.js"></script>
+    <!--script src="http://rawgit.com/amark/gun/master/gun.js"></script-->
+    <script>
+
+      var es8Docs = {
+
+        mdConverter: new showdown.Converter(),
+
+        renderMarkdown: function(mardownText) {
+
+            var html = es8Docs.mdConverter.makeHtml(mardownText);
+
+            document.getElementById('htmlcontent').innerHTML = html;
+
+        },
+
+        dirLoad: function(gitHubDirApiUrl) {
+
+          // Request file
+          var fileRequest = new XMLHttpRequest();
+          fileRequest.open('GET', gitHubDirApiUrl);
+
+          // When file is recieved
+          fileRequest.onreadystatechange = function() {
+
+              if (this.readyState == 4 && this.status == 200) {
+
+                // text -> file list array
+                var dirList = JSON.parse(fileRequest.responseText);
+
+                // markdown file list
+                var fileList = [];
+
+                for(var i = 0; i < dirList.length; i++) {
+
+                  var file = dirList[i];
+
+                  // File is a dir
+                  if(file.type == "dir") {
+
+                      // Put dir in the list
+                      fileList.push(file);
+                      // load dir child
+                      es8Docs.dirLoad(file.url);
+                  }
+
+                  // File is a markdown file
+                  if(file.type == "file" && file.name.includes(".md")) {
+
+                      if(!file.name.toLowerCase().includes('readme.md')) {
+
+                        // If not a readme, put in the list
+                        fileList.push(file);
+                      }
+
+                  }
+
+                }
+
+                // create html list
+                var html = '<nav class="mdl-navigation es8-naviguation">';
+
+                for (var i = 0; i < fileList.length; i++) {
+
+                  var file = fileList[i];
+                  html += '<span class="mdl-navigation__link" onclick="loadFile(\'' + file.url + '\')" url="' + file.url + '">' + file.name + '</span>';
+
+                }
+
+                html += '</nav>';
+
+                var parentNav = document.querySelector("span[url='" + gitHubDirApiUrl + "']");
+
+                // Put html into sidebar
+                if(parentNav) { // after a directory nav element
+
+                    parentNav.insertAdjacentHTML('afterend', html);
+                }else { // Inside the menu for the first load
+
+                    document.getElementById("naviguationMenu").innerHTML = html;
+                }
+
+              }
+          };
+
+          // Lunch the request
+          fileRequest.send();
+
+        },
+
+        fileLoad: function(gitHubFileApiUrl) {
+
+          // Prepare url
+          rawUrl = gitHubFileApiUrl.replace('https://api.github.com/repos/', 'https://raw.githubusercontent.com/').replace('contents', 'master');
+
+          // Query raw md file
+          var fileRequest = new XMLHttpRequest();
+          fileRequest.open('GET', rawUrl);
+
+          // When file is recieved
+          fileRequest.onreadystatechange = function(url) {
+
+              if (this.readyState == 4 && this.status == 200) {
+
+                  es8Docs.renderMarkdown(fileRequest.responseText);
+              }
+          };
+
+          // Lunch the request
+          fileRequest.send();
+
+          // Set file name
+          var filePath = gitHubFileApiUrl.replace("https://api.github.com/repos", "").replace("/contents", "").replace("%20", "");
+
+          document.getElementById("filepath").innerHTML = filePath;
+
+          // Set edit link
+          var editUrl = rawUrl.replace('https://raw.githubusercontent.com/', 'https://github.com/').replace('master', 'edit/master');
+
+          document.getElementById('editlink').setAttribute("href", editUrl);
+
+        },
+
+        readmeLoad: function(gitHubDirApiUrl) {
+
+          // Query dir contents
+          var fileRequest = new XMLHttpRequest();
+          fileRequest.open('GET', gitHubDirApiUrl);
+
+          // When file is recieved
+          fileRequest.onreadystatechange = function(url) {
+
+              if (this.readyState == 4 && this.status == 200) {
+
+                // file list array
+                var fileList = JSON.parse(fileRequest.responseText);
+
+                for(var i = 0; i < fileList.length; i++) {
+
+                  var file = fileList[i];
+
+                  if(file.name.toLowerCase().includes("readme.md")) {
+
+                      es8Docs.fileLoad(file.url);
+                  }
+
+                }
+
+              }
+          };
+
+          // Lunch the request
+          fileRequest.send();
+        }
+
+      };
+
+      var docPath = 'https://api.github.com/repos/esteem8/Work-a-system/contents/';
+
+      es8Docs.dirLoad(docPath);
+      es8Docs.readmeLoad(docPath);
+
+      function loadFile(url) {
+
+          if(url.includes('.md')) {
+
+              es8Docs.fileLoad(url);
+          }else {
+
+              es8Docs.readmeLoad(url);
+          }
+      }
+
+
+    </script>
+
+  </body>
+</html>
