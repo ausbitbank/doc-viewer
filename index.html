@@ -409,24 +409,35 @@
       // Get repository html url to load
       if(currentUrl.includes('?repository=')) {
 
-        es8.repositoryHtmlUrlToLoad = currentUrl.split('?repository=')[1]; // https://github.com/Primerz/Bookmarks
+        es8.repositoryHtmlUrlToLoad = currentUrl.split('?repository=')[1].replace('tree/master/', ''); // https://github.com/esteem8app/esteem8app.github.io/tree/master/docs || https://github.com/Primerz/Bookmarks
       }else {
 
         es8.repositoryHtmlUrlToLoad = currentUrl; // https://esteem8app.github.io/doc-viewer/index.html
       }
 
-      // Get author
-      if(es8.repositoryHtmlUrlToLoad.includes('.github.io')) {
+      var urlType = ''; // Can be: [github-repository, github-page]
 
-        es8.author = es8.repositoryHtmlUrlToLoad.replace(/\.github.io\/[\.a-zA-Z0-9-\/]+/g, '').replace('https://', ''); // https://esteem8app.github.io/doc-viewer/index.html -> esteem8app
+      if(/https:\/\/github.com\/.*/.test(es8.repositoryHtmlUrlToLoad)) {
 
+        urlType = 'github-repository';
+      }else if(/https:\/\/[a-zA-Z0-9-]+.github.io\/.*/.test(es8.repositoryHtmlUrlToLoad)) {
+
+        urlType = 'github-page';
       }else {
 
-        es8.author = es8.repositoryHtmlUrlToLoad.replace('https://github.com/', '').split('/')[0]; // https://github.com/Primerz/Bookmarks -> Primerz
+        console.error("url not fit: could not define if it's a repository or a page");
       }
 
-      // Get folder url
-      es8.repositoryFolder = es8.repositoryHtmlUrlToLoad.split(es8.author)[1].replace('.github.io', '').replace('index.html', ''); // https://esteem8app.github.io/doc-viewer/index.html -> /doc-viewer/;
+      // Get author & folder
+      if(urlType == 'github-repository') {
+
+        es8.author = es8.repositoryHtmlUrlToLoad.replace('https://github.com/', '').split('/')[0]; // https://github.com/Primerz/Bookmarks -> Primerz
+        es8.repositoryFolder = es8.repositoryHtmlUrlToLoad.replace(/https:\/\/github.com\/[a-zA-Z0-9-]+\//, '').replace('tree/master/', '');
+      }else if(urlType == 'github-page') {
+
+        es8.author = es8.repositoryHtmlUrlToLoad.replace(/\.github.io\/[\.a-zA-Z0-9-\/]+/g, '').replace('https://', ''); // https://esteem8app.github.io/doc-viewer/index.html -> esteem8app
+        es8.repositoryFolder = es8.repositoryHtmlUrlToLoad.replace(/https:\/\/[a-zA-Z0-9-]+.github.io\//, '').replace('index.html', '');
+      }
 
       // Remove first and last '/'
       if(es8.repositoryFolder.charAt(es8.repositoryFolder.length-1) == '/') {
@@ -440,8 +451,10 @@
       }
 
       // Translate HTML URL into API URL
-      var repositoryApiUrlToLoad = 'https://api.github.com/repos/' + es8.author + '/' + es8.repositoryFolder + '/contents/';
+      var repositoryName = es8.repositoryFolder.split('/')[0];
+      var repositoryApiUrlToLoad = 'https://api.github.com/repos/' + es8.author + '/' + repositoryName + '/contents/' + es8.repositoryFolder.replace(repositoryName, '');
 
+      console.log(repositoryApiUrlToLoad);
 
       /** QUERY DATA **/
       // Load file and folder list
