@@ -25,11 +25,15 @@
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.teal-red.min.css">
+    <link id="mdlCss" rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.red-indigo.min.css">
 
     <style>
 
       /* Element */
+      #repositoryTitle a{
+        text-decoration: none;
+      }
+
       .es8-ribbon {
         height: 30%;
         width: 100%;
@@ -105,9 +109,13 @@
       <header class="mdl-layout__header">
         <div class="mdl-layout__header-row">
 
-          <span id="repositoryName" class="es8-title mdl-layout-title">Title</span>
+          <span id="repositoryFirstFolder" class="es8-title mdl-layout-title">Title</span>
 
           <div class="mdl-layout-spacer"></div>
+
+          <nav id="topNaviguationMenu" class="mdl-navigation">
+
+          </nav>
 
           <div class="mdl-textfield mdl-js-textfield mdl-textfield--expandable
                       mdl-textfield--floating-label mdl-textfield--align-right">
@@ -128,8 +136,8 @@
         </div>
       </header>
       <div class="mdl-layout__drawer">
-        <span class="mdl-layout-title">Title</span>
-        <div id="naviguationMenu"></div>
+        <span id="repositoryTitle" class="mdl-layout-title">Title</span>
+        <div id="drawerNaviguationMenu"></div>
       </div>
       <main class="mdl-layout__content">
         <div class="es8-ribbon mdl-color--primary-dark"></div>
@@ -137,12 +145,13 @@
 
           <div class="es8-content-card mdl-card mdl-shadow--4dp">
             <div class="es8-card-title mdl-card__title mdl-card--border">
-              <h2 id="filepath" class="mdl-card__title-text">No file found</h2>
+              <h2 id="filepath" class="mdl-card__title-text">No readme.md file found</h2>
             </div>
 
             <div class="mdl-card__supporting-text">
               <div id=htmlcontent>
-                <h3>No readme</h3>
+                <img src="https://s-media-cache-ak0.pinimg.com/originals/b9/c4/0b/b9c40bca1ee2b9172239aeb2e8467268.jpg" style="margin: auto;">
+                <p>Please create a file named 'readme.md' in this folder :)</p>
               </div>
             </div>
 
@@ -180,10 +189,13 @@
     <script>
 
       /** JS & HTML API **/
-      var IDNaviguationMenu = 'naviguationMenu';
+      var IDdrawerNaviguationMenu = 'drawerNaviguationMenu';
+      var IDtopNaviguationMenu = 'topNaviguationMenu';
       var IDHtmlContentDisplayed = 'htmlcontent';
       var IDFilePath = 'filepath';
-      var IDRepositoryFolderPath = 'repositoryName';
+      var IDRepositoryFolderPath = 'repositoryFirstFolder';
+      var IDRepositoryFolder = 'repositoryTitle';
+      var IDAuthor = 'author';
       var IDDownloadCurrentFileLink = 'downloadFile';
 
       var es8 = {
@@ -193,6 +205,8 @@
         currentRawFileUrl: '',
         author: '',
         repositoryFolder: '',
+
+        menuDepth: 0,
 
         /** JS JS API **/
         getClassicalUrl: function() {
@@ -209,6 +223,8 @@
         },
 
         dirLoad: function(gitHubDirApiUrl) {
+
+          es8.menuDepth += 1;
 
           // Request file
           var fileRequest = new XMLHttpRequest();
@@ -253,28 +269,53 @@
 
                 }
 
-                // create html list
-                var html = '<nav class="mdl-navigation es8-naviguation">';
+                /* CREATE MENU */
+                // create drawer html list
+                var draweMenuHtml = '<nav class="mdl-navigation es8-naviguation">';
 
                 for (var i = 0; i < fileList.length; i++) {
 
                   var file = fileList[i];
-                  html += '<span class="mdl-navigation__link" onclick="es8.loadFile(\'' + file.url + '\')" url="' + file.url + '"><i class="material-icons">' + file.icon + '</i> ' + file.name + '</span>';
+                  draweMenuHtml += '<span class="mdl-navigation__link" onclick="es8.loadFile(\'' + file.url + '\')" url="' + file.url + '"><i class="material-icons">' + file.icon + '</i> ' + file.name + '</span>';
 
                 }
 
-                html += '</nav>';
+                draweMenuHtml += '</nav>';
 
                 var parentNav = document.querySelector("span[url='" + gitHubDirApiUrl + "']");
 
                 // Put html into sidebar
                 if(parentNav) { // after a directory nav element
 
-                    parentNav.insertAdjacentHTML('afterend', html);
+                    parentNav.insertAdjacentHTML('afterend', draweMenuHtml);
                 }else { // Inside the menu for the first load
 
-                    document.getElementById(IDNaviguationMenu).innerHTML = html;
+                    document.getElementById(IDdrawerNaviguationMenu).innerHTML = draweMenuHtml;
                 }
+
+                /* TOP MENU */
+
+                if(es8.menuDepth <= 1) {
+
+                    var topMenuHtml = '';
+
+                    for (var i = 0; i < fileList.length; i++) {
+
+                      var file = fileList[i];
+
+                      if(!file.name.toLowerCase().includes('readme.md')) {
+
+                          topMenuHtml += '<span class="mdl-navigation__link" onclick="es8.loadFile(\'' + file.url + '\')" url="' + file.url + '">' + file.name.replace('.md', '') + '</span>';
+                      }
+
+                    }
+
+                    document.getElementById(IDtopNaviguationMenu).innerHTML = topMenuHtml;
+                }else {
+
+                    document.getElementById(IDtopNaviguationMenu).setAttribute('style', 'display: none;');
+                }
+
               }else {
 
                 console.log("Query response error when loading file list");
@@ -396,76 +437,99 @@
 
           // Lunch the request
           fileRequest.send();
+        },
+
+        init: function() {
+
+            // GET URL
+            var currentUrl = window.location.href;
+            es8.repositoryHtmlUrlToLoad = currentUrl
+
+            // SET URL PARAMS
+            if(currentUrl.includes('?')) { // url?param=value&param=value
+
+              var urlParams = currentUrl.split('?')[1].split('&'); // [param=value, param=value]
+
+              for (var i = 0;i < urlParams.length;i++) {
+
+                var urlParam = urlParams[i].split('='); //name=value
+                var urlParamName = urlParam[0]; // name
+                var urlParamValue = urlParam[1]; // value
+
+                switch (urlParamName) {
+                  case 'repository':
+                    es8.repositoryHtmlUrlToLoad = urlParamValue;
+                    break;
+
+                  case 'colors':
+                    document.getElementById('mdlCss').setAttribute('href', 'https://code.getmdl.io/1.3.0/material.' + urlParamValue + '.min.css');
+
+                }
+
+              }
+            }
+
+            // DETECT URL TYPE TO LOAD
+            var urlType = ''; // Can be: [github-repository, github-page]
+            if(/https:\/\/github.com\/.*/.test(es8.repositoryHtmlUrlToLoad)) {
+
+              urlType = 'github-repository';
+            }else if(/https:\/\/[a-zA-Z0-9-]+.github.io\/.*/.test(es8.repositoryHtmlUrlToLoad)) {
+
+              urlType = 'github-page';
+            }else {
+
+              console.error("url not fit: could not define if it's a repository or a page");
+            }
+
+            // EXTRACT URL (author repository, path) -> API URL
+            // Get author & folder
+            if(urlType == 'github-repository') {
+
+              es8.author = es8.repositoryHtmlUrlToLoad.replace('https://github.com/', '').split('/')[0]; // https://github.com/Primerz/Bookmarks -> Primerz
+              es8.repositoryFolder = es8.repositoryHtmlUrlToLoad.replace(/https:\/\/github.com\/[a-zA-Z0-9-]+\//, '').replace('tree/master/', '');
+            }else if(urlType == 'github-page') {
+
+              es8.author = es8.repositoryHtmlUrlToLoad.replace(/\.github.io\/[\.a-zA-Z0-9-\/]+/g, '').replace('https://', ''); // https://esteem8app.github.io/doc-viewer/index.html -> esteem8app
+              es8.repositoryFolder = es8.repositoryHtmlUrlToLoad.replace(/https:\/\/[a-zA-Z0-9-]+.github.io\//, '').replace('index.html', '');
+            }
+
+            // Remove first and last '/'
+            if(es8.repositoryFolder.charAt(es8.repositoryFolder.length-1) == '/') {
+
+               es8.repositoryFolder = es8.repositoryFolder.slice(0, -1);
+            }
+
+            if(es8.repositoryFolder.charAt(0) == '/') {
+
+               es8.repositoryFolder = es8.repositoryFolder.slice(1);
+            }
+
+            // Get repository name (main folder of the current repository)
+            var repositoryPathSplitted = es8.repositoryFolder.split('/');
+            es8.repositoryFirstFolder = repositoryPathSplitted[0];
+            es8.repositoryCurrentFolder = repositoryPathSplitted[repositoryPathSplitted.length-1] || repositoryPathSplitted;
+
+            // Translate (repo & page) HTML URL into API & (github repo) HTML URL
+            var repositoryApiUrlToLoad = 'https://api.github.com/repos/' + es8.author + '/' + es8.repositoryFirstFolder + '/contents/' + es8.repositoryFolder.replace(es8.repositoryFirstFolder, '');
+            var repositoryFolderHtmlPath = 'https://github.com/' + es8.author + '/' + es8.repositoryFirstFolder + '/tree/master/' + es8.repositoryFolder.replace(es8.repositoryFirstFolder, '');
+
+            /** LUNCH ES8 **/
+            // Load file and folder list
+            es8.dirLoad(repositoryApiUrlToLoad);
+
+            // Load readme
+            es8.readmeLoad(repositoryApiUrlToLoad);
+
+            /** SET PARAMS **/
+            document.getElementById(IDRepositoryFolderPath).innerHTML = es8.repositoryFolder;
+            document.getElementById(IDRepositoryFolder).innerHTML = '<a href="' + repositoryFolderHtmlPath + '" target=_blank>' + es8.repositoryCurrentFolder + '</a>';
+
         }
 
       };
 
-
-      /** GET QUERY DATA **/
-      var currentUrl = window.location.href;
-
-      //var docPath = currentLocation.replace('/index.html', 'https://api.github.com/repos/').replace('.github.io', '').replace('index.html', 'contents/');
-
-      // Get repository html url to load
-      if(currentUrl.includes('?repository=')) {
-
-        es8.repositoryHtmlUrlToLoad = currentUrl.split('?repository=')[1].replace('tree/master/', ''); // https://github.com/esteem8app/esteem8app.github.io/tree/master/docs || https://github.com/Primerz/Bookmarks
-      }else {
-
-        es8.repositoryHtmlUrlToLoad = currentUrl; // https://esteem8app.github.io/doc-viewer/index.html
-      }
-
-      var urlType = ''; // Can be: [github-repository, github-page]
-
-      if(/https:\/\/github.com\/.*/.test(es8.repositoryHtmlUrlToLoad)) {
-
-        urlType = 'github-repository';
-      }else if(/https:\/\/[a-zA-Z0-9-]+.github.io\/.*/.test(es8.repositoryHtmlUrlToLoad)) {
-
-        urlType = 'github-page';
-      }else {
-
-        console.error("url not fit: could not define if it's a repository or a page");
-      }
-
-      // Get author & folder
-      if(urlType == 'github-repository') {
-
-        es8.author = es8.repositoryHtmlUrlToLoad.replace('https://github.com/', '').split('/')[0]; // https://github.com/Primerz/Bookmarks -> Primerz
-        es8.repositoryFolder = es8.repositoryHtmlUrlToLoad.replace(/https:\/\/github.com\/[a-zA-Z0-9-]+\//, '').replace('tree/master/', '');
-      }else if(urlType == 'github-page') {
-
-        es8.author = es8.repositoryHtmlUrlToLoad.replace(/\.github.io\/[\.a-zA-Z0-9-\/]+/g, '').replace('https://', ''); // https://esteem8app.github.io/doc-viewer/index.html -> esteem8app
-        es8.repositoryFolder = es8.repositoryHtmlUrlToLoad.replace(/https:\/\/[a-zA-Z0-9-]+.github.io\//, '').replace('index.html', '');
-      }
-
-      // Remove first and last '/'
-      if(es8.repositoryFolder.charAt(es8.repositoryFolder.length-1) == '/') {
-
-         es8.repositoryFolder = es8.repositoryFolder.slice(0, -1);
-      }
-
-      if(es8.repositoryFolder.charAt(0) == '/') {
-
-         es8.repositoryFolder = es8.repositoryFolder.slice(1);
-      }
-
-      // Translate HTML URL into API URL
-      var repositoryName = es8.repositoryFolder.split('/')[0];
-      var repositoryApiUrlToLoad = 'https://api.github.com/repos/' + es8.author + '/' + repositoryName + '/contents/' + es8.repositoryFolder.replace(repositoryName, '');
-
-      console.log(repositoryApiUrlToLoad);
-
-      /** QUERY DATA **/
-      // Load file and folder list
-      es8.dirLoad(repositoryApiUrlToLoad);
-
-      // Load readme
-      es8.readmeLoad(repositoryApiUrlToLoad);
-
-      /** SET PARAMS **/
-      document.getElementById(IDRepositoryFolderPath).innerHTML = es8.repositoryFolder;
-
+      es8.init();
 
       // http://apostrophecms.org/docs/tutorials/intermediate/model-layer.html#working-with-projections
 
